@@ -5,10 +5,12 @@ authors = ["watiko <service@mail.watiko.net>"]
 edition = "2018"
 
 [dependencies]
+bitflags = "1.2.1"
 # bluster = "0.1.2"
 bluster = { git = "https://github.com/dfrankland/bluster", rev = "1931b0474ca481eb31e343cab85956c05749688b" }
 env_logger = "0.8.2"
 futures = "0.3"
+gilrs = "0.8.0"
 log = "0.4.11"
 tokio = "0.2"
 uuid = "0.8.1"

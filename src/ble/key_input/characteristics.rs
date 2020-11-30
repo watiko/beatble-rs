@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::sync::{atomic, Arc};
+use std::sync::{atomic, Arc, Mutex};
 use std::thread;
 
 use bluster::{
@@ -12,46 +12,61 @@ use bluster::{
 };
 use futures::channel::mpsc::channel;
 use futures::StreamExt;
-use log::{debug, info};
+use log::{debug, info, trace};
 use tokio::time::Duration;
 use uuid::Uuid;
 
-const CHARACTERISTIC_UUID: u16 = 0xFF01;
-const SLEEP_DURATION: Duration = Duration::from_millis(500);
+use crate::input::KeyInput;
 
-pub fn create_key_input_characteristic(descriptors: HashSet<Descriptor>) -> Characteristic {
+const CHARACTERISTIC_UUID: u16 = 0xFF01;
+const SLEEP_DURATION: Duration = Duration::from_millis(8);
+
+pub fn create_key_input_characteristic(
+    key_input: Arc<Mutex<KeyInput>>,
+    descriptors: HashSet<Descriptor>,
+) -> Characteristic {
     debug!("create_key_input_characteristic");
 
     let (sender, receiver) = channel(1);
 
-    let characteristic_handler = async {
+    let characteristic_handler = async move {
         debug!("create_key_input_characteristic: handler spawned");
         let notifying = Arc::new(atomic::AtomicBool::new(false));
         let mut rx = receiver;
         while let Some(event) = rx.next().await {
             match event {
                 Event::NotifySubscribe(notify_subscribe) => {
-                    debug!("notify request to UUID({}) received", CHARACTERISTIC_UUID);
+                    info!("notify request to UUID({}) received", CHARACTERISTIC_UUID);
                     let notifying = Arc::clone(&notifying);
                     notifying.store(true, atomic::Ordering::Relaxed);
 
-                    thread::spawn(move || loop {
-                        debug!("send notify from UUID({})", CHARACTERISTIC_UUID);
-                        if !(&notifying).load(atomic::Ordering::Relaxed) {
-                            break;
-                        };
+                    let mut counter: u16 = 0;
+                    let key_input = Arc::clone(&key_input);
+                    thread::spawn(move || {
+                        let key_input = Arc::clone(&key_input);
+                        loop {
+                            if !(&notifying).load(atomic::Ordering::Relaxed) {
+                                break;
+                            };
 
-                        notify_subscribe
-                            .clone()
-                            .notification
-                            .try_send(vec![0x01, 0x02])
-                            .unwrap();
+                            let payload =
+                                { key_input.lock().unwrap().to_payload((counter & 0xFF) as u8) };
+                            trace!("payload: {:?}", payload);
 
-                        thread::sleep(SLEEP_DURATION);
+                            notify_subscribe
+                                .clone()
+                                .notification
+                                .try_send(payload.to_vec())
+                                .unwrap();
+
+                            counter = (counter + 2) & 0xFF;
+                            thread::sleep(SLEEP_DURATION);
+                        }
+                        debug!("key input handler finished");
                     });
                 }
                 Event::NotifyUnsubscribe => {
-                    debug!(
+                    info!(
                         "unsubscribe request to UUID({}) received",
                         CHARACTERISTIC_UUID
                     );
