@@ -21,7 +21,8 @@ bitflags! {
     }
 }
 
-#[derive(Clone, Debug)]
+#[repr(align(4))] // for AtomicCell
+#[derive(Clone, Copy, Debug)]
 pub struct KeyInput {
     pub scratch: u8,
     pub normal_button: NormalButton,

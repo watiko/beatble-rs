@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::sync::{atomic, Arc, Mutex};
+use std::sync::{Arc, atomic};
 use std::thread;
 
 use bluster::{
@@ -10,6 +10,7 @@ use bluster::{
     },
     SdpShortUuid,
 };
+use crossbeam::atomic::AtomicCell;
 use futures::channel::mpsc::channel;
 use futures::StreamExt;
 use log::{debug, info, trace};
@@ -22,7 +23,7 @@ const CHARACTERISTIC_UUID: u16 = 0xFF01;
 const SLEEP_DURATION: Duration = Duration::from_millis(8);
 
 pub fn create_key_input_characteristic(
-    key_input: Arc<Mutex<KeyInput>>,
+    key_input: Arc<AtomicCell<KeyInput>>,
     descriptors: HashSet<Descriptor>,
 ) -> Characteristic {
     debug!("create_key_input_characteristic");
@@ -43,14 +44,13 @@ pub fn create_key_input_characteristic(
                     let mut counter: u16 = 0;
                     let key_input = Arc::clone(&key_input);
                     thread::spawn(move || {
-                        let key_input = Arc::clone(&key_input);
                         loop {
                             if !(&notifying).load(atomic::Ordering::Relaxed) {
                                 break;
                             };
 
                             let payload =
-                                { key_input.lock().unwrap().to_payload((counter & 0xFF) as u8) };
+                                { key_input.load().to_payload((counter & 0xFF) as u8) };
                             trace!("payload: {:?}", payload);
 
                             notify_subscribe

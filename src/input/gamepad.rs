@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use gilrs::ev::Button;
+use crossbeam::atomic::AtomicCell;
 use gilrs::{Event, EventType, GilrsBuilder};
+use gilrs::ev::Button;
 use log::{debug, error, info, trace};
 
 use super::ble::{KeyInput, NormalButton, OptionButton};
@@ -39,11 +40,12 @@ impl CodeExt for Button {
     }
 }
 
-pub fn create_input_handler() -> Result<Arc<Mutex<KeyInput>>, Box<dyn std::error::Error>> {
-    let key_input_mutex = Arc::new(Mutex::new(KeyInput::init()));
+pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::error::Error>> {
+    debug!("AtomicCell::<KeyInput>::is_lock_free: {}", AtomicCell::<KeyInput>::is_lock_free());
+    let atomic_key_input = Arc::new(AtomicCell::new(KeyInput::init()));
 
     {
-        let key_input_mutex = Arc::clone(&key_input_mutex);
+        let atomic_key_input = Arc::clone(&atomic_key_input);
         let input_handler = std::thread::spawn(move || {
             info!("input handler spawned");
             let mut gilrs = GilrsBuilder::new()
@@ -105,8 +107,7 @@ pub fn create_input_handler() -> Result<Arc<Mutex<KeyInput>>, Box<dyn std::error
                     };
 
                     trace!("key_input: {:?}", key_input);
-                    let mut key_input_lock = key_input_mutex.lock().unwrap();
-                    *key_input_lock = key_input.clone();
+                    atomic_key_input.store(key_input);
                 }
             }
         });
@@ -116,5 +117,5 @@ pub fn create_input_handler() -> Result<Arc<Mutex<KeyInput>>, Box<dyn std::error
         });
     }
 
-    Ok(key_input_mutex)
+    Ok(atomic_key_input)
 }
