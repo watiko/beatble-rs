@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crossbeam::atomic::AtomicCell;
-use gilrs::{Event, EventType, Gilrs, GilrsBuilder};
 use gilrs::ev::Button;
+use gilrs::{Event, EventType, Gilrs, GilrsBuilder};
 use log::{debug, error, info, trace};
 
 use super::ble::{KeyInput, NormalButton, OptionButton};
@@ -45,7 +45,8 @@ impl CodeExt for Button {
 // value: from -1.0 to 1.0
 #[inline]
 fn convert_scratch(value: f32) -> u8 {
-    ((value + 1.0) * 128.0) as u8
+    // sensitivity is doubled
+    ((((value + 1.0) * 256.0) as u16) % 256) as u8
 }
 
 pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::error::Error>> {
