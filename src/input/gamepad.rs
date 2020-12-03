@@ -40,6 +40,11 @@ impl CodeExt for Button {
     }
 }
 
+// value: from -1.0 to 1.0
+fn convert_scratch(value: f32) -> u8 {
+    ((value + 1.0) * 128.0) as u8
+}
+
 pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::error::Error>> {
     debug!(
         "AtomicCell::<KeyInput>::is_lock_free: {}",
@@ -112,8 +117,7 @@ fn update_key_input(key_input: &mut KeyInput, event_type: EventType) {
             }
         }
         EventType::AxisChanged(_axis, value, _code) => {
-            let scratch = ((value + 1.0) * 128.0) as u8;
-            key_input.scratch = scratch;
+            key_input.scratch = convert_scratch(value);
         }
         EventType::ButtonChanged(_, _, _) | EventType::ButtonRepeated(_, _) => {
             // ignore
