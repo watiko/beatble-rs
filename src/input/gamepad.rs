@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crossbeam::atomic::AtomicCell;
-use gilrs::ev::Button;
 use gilrs::{Event, EventType, Gilrs, GilrsBuilder};
+use gilrs::ev::Button;
 use log::{debug, error, info, trace};
 
 use super::ble::{KeyInput, NormalButton, OptionButton};
@@ -16,6 +16,7 @@ trait CodeExt {
 }
 
 impl CodeExt for Button {
+    #[inline]
     fn normal_button(self) -> Option<NormalButton> {
         match self {
             Button::South => Some(NormalButton::B1),
@@ -29,6 +30,7 @@ impl CodeExt for Button {
         }
     }
 
+    #[inline]
     fn option_button(self) -> Option<OptionButton> {
         match self {
             Button::Select => Some(OptionButton::E1),
@@ -41,6 +43,7 @@ impl CodeExt for Button {
 }
 
 // value: from -1.0 to 1.0
+#[inline]
 fn convert_scratch(value: f32) -> u8 {
     ((value + 1.0) * 128.0) as u8
 }
@@ -98,6 +101,7 @@ fn create_gilrs() -> Result<Gilrs, gilrs::Error> {
         .build()
 }
 
+#[inline]
 fn update_key_input(key_input: &mut KeyInput, event_type: EventType) {
     match event_type {
         EventType::ButtonPressed(button, _code) => {
