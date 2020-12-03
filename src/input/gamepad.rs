@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crossbeam::atomic::AtomicCell;
-use gilrs::{Event, EventType, GilrsBuilder};
 use gilrs::ev::Button;
+use gilrs::{Event, EventType, GilrsBuilder};
 use log::{debug, error, info, trace};
 
 use super::ble::{KeyInput, NormalButton, OptionButton};
@@ -41,7 +41,10 @@ impl CodeExt for Button {
 }
 
 pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::error::Error>> {
-    debug!("AtomicCell::<KeyInput>::is_lock_free: {}", AtomicCell::<KeyInput>::is_lock_free());
+    debug!(
+        "AtomicCell::<KeyInput>::is_lock_free: {}",
+        AtomicCell::<KeyInput>::is_lock_free()
+    );
     let atomic_key_input = Arc::new(AtomicCell::new(KeyInput::init()));
 
     {

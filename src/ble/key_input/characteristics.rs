@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::sync::{Arc, atomic};
+use std::sync::{atomic, Arc};
 use std::thread;
 
 use bluster::{
@@ -20,10 +20,10 @@ use uuid::Uuid;
 use crate::input::KeyInput;
 
 const CHARACTERISTIC_UUID: u16 = 0xFF01;
-const SLEEP_DURATION: Duration = Duration::from_millis(8);
 
 pub fn create_key_input_characteristic(
     key_input: Arc<AtomicCell<KeyInput>>,
+    sleep_duration: Duration,
     descriptors: HashSet<Descriptor>,
 ) -> Characteristic {
     debug!("create_key_input_characteristic");
@@ -49,8 +49,7 @@ pub fn create_key_input_characteristic(
                                 break;
                             };
 
-                            let payload =
-                                { key_input.load().to_payload((counter & 0xFF) as u8) };
+                            let payload = { key_input.load().to_payload((counter & 0xFF) as u8) };
                             trace!("payload: {:?}", payload);
 
                             notify_subscribe
@@ -60,7 +59,7 @@ pub fn create_key_input_characteristic(
                                 .unwrap();
 
                             counter = (counter + 2) & 0xFF;
-                            thread::sleep(SLEEP_DURATION);
+                            thread::sleep(sleep_duration);
                         }
                         debug!("key input handler finished");
                     });
