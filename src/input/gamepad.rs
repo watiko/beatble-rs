@@ -58,36 +58,34 @@ pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::
 
     {
         let atomic_key_input = Arc::clone(&atomic_key_input);
-        std::thread::Builder::new()
-            .name("input_handler".to_string())
-            .spawn(move || {
-                info!("input_handler spawned");
-                let mut gilrs = create_gilrs().expect("failed to create gilrs instance");
+        tokio::task::spawn_blocking(move || {
+            info!("input_handler spawned");
+            let mut gilrs = create_gilrs().expect("failed to create gilrs instance");
 
-                for (id, gamepad) in gilrs.gamepads() {
-                    debug!("founded gamepad: id({}), name({})", id, gamepad.name());
+            for (id, gamepad) in gilrs.gamepads() {
+                debug!("founded gamepad: id({}), name({})", id, gamepad.name());
+            }
+
+            // TODO: make selectable
+            let (gamepad_id, gamepad) = gilrs.gamepads().next().expect("no gamepad detected");
+            info!("connected gamepad name: {}", gamepad.name());
+            let mut key_input = KeyInput::init();
+
+            info!("input handler watching input event");
+            loop {
+                while let Some(Event { id, event, time: _ }) = gilrs.next_event() {
+                    if id != gamepad_id {
+                        // filter
+                        continue;
+                    };
+
+                    trace!("event: {:?}", event);
+                    update_key_input(&mut key_input, event);
+                    trace!("key_input: {:?}", key_input);
+                    atomic_key_input.store(key_input);
                 }
-
-                // TODO: make selectable
-                let (gamepad_id, gamepad) = gilrs.gamepads().next().expect("no gamepad detected");
-                info!("connected gamepad name: {}", gamepad.name());
-                let mut key_input = KeyInput::init();
-
-                info!("input handler watching input event");
-                loop {
-                    while let Some(Event { id, event, time: _ }) = gilrs.next_event() {
-                        if id != gamepad_id {
-                            // filter
-                            continue;
-                        };
-
-                        trace!("event: {:?}", event);
-                        update_key_input(&mut key_input, event);
-                        trace!("key_input: {:?}", key_input);
-                        atomic_key_input.store(key_input);
-                    }
-                }
-            })?;
+            }
+        });
     };
 
     Ok(atomic_key_input)

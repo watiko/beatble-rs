@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::sync::{atomic, Arc};
-use std::thread;
 
 use bluster::{
     gatt::{
@@ -43,30 +42,26 @@ pub fn create_key_input_characteristic(
 
                     let mut counter: u16 = 0;
                     let key_input = Arc::clone(&key_input);
-                    thread::Builder::new()
-                        .name("ble_notifier".to_string())
-                        .spawn(move || {
-                            loop {
-                                if !(&notifying).load(atomic::Ordering::Relaxed) {
-                                    break;
-                                };
+                    tokio::spawn(async move {
+                        loop {
+                            if !(&notifying).load(atomic::Ordering::Relaxed) {
+                                break;
+                            };
 
-                                let payload =
-                                    { key_input.load().to_payload((counter & 0xFF) as u8) };
-                                trace!("payload: {:?}", payload);
+                            let payload = { key_input.load().to_payload((counter & 0xFF) as u8) };
+                            trace!("payload: {:?}", payload);
 
-                                notify_subscribe
-                                    .clone()
-                                    .notification
-                                    .try_send(payload.to_vec())
-                                    .unwrap();
+                            notify_subscribe
+                                .clone()
+                                .notification
+                                .try_send(payload.to_vec())
+                                .unwrap();
 
-                                counter = (counter + 2) & 0xFF;
-                                thread::sleep(sleep_duration);
-                            }
-                            debug!("ble_notifier finished");
-                        })
-                        .expect("failed to create a thread ble_notifier");
+                            counter = (counter + 2) & 0xFF;
+                            tokio::time::delay_for(sleep_duration).await;
+                        }
+                        debug!("ble_notifier finished");
+                    });
                 }
                 Event::NotifyUnsubscribe => {
                     info!(
