@@ -2,6 +2,7 @@
 name = "beatble"
 version = "0.1.0"
 authors = ["watiko <service@mail.watiko.net>"]
+license = "MIT"
 edition = "2018"
 
 [dependencies]
