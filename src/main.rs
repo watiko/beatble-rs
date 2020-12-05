@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(v) => v
             .parse()
             .expect("SLEEP_DURATION should be number of milliseconds"),
-        Err(_) => 5,
+        Err(_) => 8, // 1000 / 120
     };
     debug!("SLEEP_DURATION: {}", sleep_duration);
     let sleep_duration = tokio::time::Duration::from_millis(sleep_duration);
