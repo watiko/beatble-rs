@@ -15,3 +15,12 @@ gilrs = "0.8.0"
 log = "0.4.11"
 tokio = { version = "0.2", features = ["full"] }
 uuid = "0.8.1"
+
+[package.metadata.deb]
+depends = "udev, systemd"
+assets = [
+  ["target/release/beatble", "usr/bin/", "755"],
+  ["assets/udev/*", "etc/udev/rules.d/", "644"],
+  ["assets/systemd/*", "etc/systemd/system/", "755"],
+]
+

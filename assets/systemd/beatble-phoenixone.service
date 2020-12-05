@@ -1,0 +1,10 @@
+[Unit]
+Description=beatble service
+Requires=dev-phoenixone.device
+After=dev-phoenixone.device
+
+[Service]
+Type=simple
+Environment="RUST_LOG=debug"
+Environment="SLEEP_DURATION=8"
+ExecStart=/usr/bin/beatble
