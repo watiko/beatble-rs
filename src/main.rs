@@ -12,7 +12,7 @@ const ADVERTISING_NAME: &str = "IIDX Entry model";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let sleep_duration: u64 = match std::env::var("SLEEP_DURATION") {
         Ok(v) => v
