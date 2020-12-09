@@ -1,7 +1,7 @@
 [Unit]
 Description=beatble service
-BindsTo=dev-phoenixone.device
-After=dev-phoenixone.device
+BindsTo=dev-phoenixwan.device
+After=dev-phoenixwan.device
 
 [Service]
 Type=simple
