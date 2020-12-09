@@ -57,6 +57,12 @@ pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::
     let atomic_key_input = Arc::new(AtomicCell::new(KeyInput::init()));
 
     {
+        // duplicated because Send is not implemented to Gilrs on Linux
+        let gilrs = create_gilrs().expect("failed to create gilrs instance");
+        gilrs.gamepads().next().expect("no gamepad detected");
+    }
+
+    {
         let atomic_key_input = Arc::clone(&atomic_key_input);
         tokio::task::spawn_blocking(move || {
             info!("input_handler spawned");
