@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use bluster::Peripheral;
+use crossbeam::atomic::AtomicCell;
 use log::{debug, info};
 
-use crate::input::create_input_handler;
+use crate::input::{create_input_handler, KeyInput};
 
 use self::ble::create_key_input;
 
@@ -26,6 +29,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Preparing input handler");
     let key_input = create_input_handler()?;
 
+    run_peripheral(key_input, sleep_duration).await
+}
+
+async fn run_peripheral(
+    key_input: Arc<AtomicCell<KeyInput>>,
+    sleep_duration: tokio::time::Duration,
+) -> Result<(), Box<dyn std::error::Error>> {
     info!("Preparing peripheral");
     let peripheral = Peripheral::new().await?;
     peripheral.add_service(&create_key_input(key_input, sleep_duration))?;
