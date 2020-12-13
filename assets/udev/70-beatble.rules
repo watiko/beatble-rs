@@ -1,4 +1,11 @@
+SUBSYSTEMS=="usb", ENV{.LOCAL_bInterfaceNumber}="$attr{bInterfaceNumber}"
+
 SUBSYSTEMS=="usb", ACTION=="add", \
   ATTRS{idVendor}=="1ccf", ATTRS{idProduct}=="8048", \
-  TAG+="systemd", SYMLINK+="phoenixwan", \
-  ENV{SYSTEMD_WANTS}+="beatble-phoenixwan.service",
+  ENV{.LOCAL_bInterfaceNumber}=="01", \
+  TAG+="systemd", SYMLINK+="input/phoenixwan", \
+  ENV{SYSTEMD_WANTS}+="beatble-phoenixwan.service"
+
+KERNEL=="js*", ACTION=="add", \
+  ATTRS{idVendor}=="1ccf", ATTRS{idProduct}=="8048", \
+  SYMLINK+="input/js.phoenixwan"
