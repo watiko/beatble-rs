@@ -6,13 +6,13 @@ Use your arcade style controller through Bluetooth Low Energy (BLE) for beatmani
 
 ## Prerequisites
 
+- Linux (depending on JoyStick API)
 - cargo: https://rustup.rs/
 - (optional) cargo-deb: `cargo install cargo-deb`
 - `libdbus-1-dev`
-- `libudev-dev`
 
 ```bash
-$ sudo apt install libdbus-1-dev libudev-dev
+$ sudo apt install libdbus-1-dev
 ```
 
 ## Build

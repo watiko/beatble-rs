@@ -3,6 +3,7 @@ use std::sync::Arc;
 use bluster::Peripheral;
 use clap::{value_t, App, Arg};
 use crossbeam::atomic::AtomicCell;
+use eyre::Result;
 use log::{debug, info};
 
 use crate::input::{create_input_handler, KeyInput};
@@ -15,7 +16,7 @@ mod input;
 const ADVERTISING_NAME: &str = "IIDX Entry model";
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let matches = App::new("beatble")
@@ -42,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sleep_duration = tokio::time::Duration::from_millis(sleep_duration);
 
     info!("Preparing input handler");
-    let key_input = create_input_handler()?;
+    let key_input = create_input_handler(&input)?;
 
     run_peripheral(key_input, sleep_duration).await
 }
@@ -50,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_peripheral(
     key_input: Arc<AtomicCell<KeyInput>>,
     sleep_duration: tokio::time::Duration,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     info!("Preparing peripheral");
     let peripheral = Peripheral::new().await?;
     peripheral.add_service(&create_key_input(key_input, sleep_duration))?;
