@@ -41,7 +41,8 @@ impl CodeExt for u8 {
 
 #[inline]
 fn convert_scratch(value: i16) -> u8 {
-    (value >> 8) as u8
+    // sensitivity is doubled
+    (((((value >> 8) as u8) as u16) * 2) % 0xFF) as u8
 }
 
 pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
