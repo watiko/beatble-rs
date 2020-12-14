@@ -24,7 +24,7 @@ pub enum OpenError {
     #[error("InvalidPath")]
     InvalidPath,
     #[error("Unknown: {0}")]
-    Unknown(String),
+    Unknown(eyre::Report),
 }
 
 bitflags! {
@@ -78,7 +78,7 @@ impl Device {
                     Error::Sys(Errno::ENOENT) => DeviceFileNotFound(path.to_string()),
                     Error::Sys(Errno::EPERM) => PermissionDenied(path.to_string()),
                     Error::InvalidPath | Error::InvalidUtf8 => InvalidPath,
-                    e => Unknown(format!("open error: {}", e)),
+                    e => Unknown(e.into()),
                 }
             },
         )?;
