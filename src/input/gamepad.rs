@@ -54,6 +54,7 @@ pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
 
     let mut device = Device::open(input).context(format!("no gamepad found: {}", input))?;
     info!("connected to {} at {}", device.info()?, input);
+    device.disable_correction()?;
 
     {
         let atomic_key_input = Arc::clone(&atomic_key_input);

@@ -1,10 +1,15 @@
+// https://www.kernel.org/doc/Documentation/input/joystick-api.txt
+// https://github.com/torvalds/linux/blob/v5.10/include/uapi/linux/joystick.h
+
 use std::os::unix::io::RawFd;
 
 use bitflags::bitflags;
 use eyre::Result;
+use nix::{fcntl, unistd};
 use nix::errno::Errno;
-use nix::{fcntl, ioctl_read, ioctl_read_buf, unistd};
 use thiserror::Error;
+
+use ioctl::{CorrectionType, JsCorrection};
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -56,14 +61,66 @@ struct RawEvent {
     number: u8,
 }
 
-const JS_IOC_MAGIC: u8 = b'j';
-const JS_IOC_TYPE_GET_AXES: u8 = 0x11;
-const JS_IOC_TYPE_GET_BUTTONS: u8 = 0x12;
-const JS_IOC_TYPE_GET_NAME: u8 = 0x13;
+mod ioctl {
+    use std::mem::size_of;
 
-ioctl_read!(js_get_axes, JS_IOC_MAGIC, JS_IOC_TYPE_GET_AXES, u8);
-ioctl_read!(js_get_buttons, JS_IOC_MAGIC, JS_IOC_TYPE_GET_BUTTONS, u8);
-ioctl_read_buf!(js_get_name, JS_IOC_MAGIC, JS_IOC_TYPE_GET_NAME, u8);
+    use nix::{ioctl_read, ioctl_read_buf, libc, request_code_read, request_code_write};
+    use nix::errno::Errno;
+
+    #[repr(u16)]
+    #[derive(Debug, Clone)]
+    #[allow(dead_code)]
+    pub enum CorrectionType {
+        None = 0x00,
+        Broken = 0x01,
+    }
+
+    #[repr(C)]
+    #[derive(Debug, Clone)]
+    pub struct JsCorrection {
+        pub coefficients: [i32; 8],
+        pub precision: i16,
+        pub typ: CorrectionType,
+    }
+
+    const JS_IOC_MAGIC: u8 = b'j';
+    const JS_IOC_TYPE_GET_AXES: u8 = 0x11;
+    const JS_IOC_TYPE_GET_BUTTONS: u8 = 0x12;
+    const JS_IOC_TYPE_GET_NAME: u8 = 0x13;
+    const JS_IOC_TYPE_SET_CORRECTION: u8 = 0x21;
+    const JS_IOC_TYPE_GET_CORRECTION: u8 = 0x22;
+
+    ioctl_read!(js_get_axes, JS_IOC_MAGIC, JS_IOC_TYPE_GET_AXES, u8);
+    ioctl_read!(js_get_buttons, JS_IOC_MAGIC, JS_IOC_TYPE_GET_BUTTONS, u8);
+    ioctl_read_buf!(js_get_name, JS_IOC_MAGIC, JS_IOC_TYPE_GET_NAME, u8);
+
+    const REQ_SET_CORRECTION: libc::c_ulong = request_code_write!(
+        JS_IOC_MAGIC,
+        JS_IOC_TYPE_SET_CORRECTION,
+        size_of::<JsCorrection>()
+    );
+    const REQ_GET_CORRECTION: libc::c_ulong = request_code_read!(
+        JS_IOC_MAGIC,
+        JS_IOC_TYPE_GET_CORRECTION,
+        size_of::<JsCorrection>()
+    );
+
+    pub unsafe fn js_set_correction(
+        fd: libc::c_int,
+        data: &mut [JsCorrection],
+    ) -> nix::Result<libc::c_int> {
+        let res = libc::ioctl(fd, REQ_SET_CORRECTION, data);
+        Errno::result(res)
+    }
+
+    pub unsafe fn js_get_correction(
+        fd: libc::c_int,
+        data: &mut [JsCorrection],
+    ) -> nix::Result<libc::c_int> {
+        let res = libc::ioctl(fd, REQ_GET_CORRECTION, data);
+        Errno::result(res)
+    }
+}
 
 impl From<RawEvent> for Option<Event> {
     #[inline]
@@ -108,15 +165,44 @@ impl Device {
         Ok(Device(fd))
     }
 
+    pub fn disable_correction(&self) -> Result<()> {
+        let mut axes = 0u8;
+        // 64 is max axis number for safety
+        let mut corr = std::mem::MaybeUninit::<[JsCorrection; 64]>::uninit();
+        let corr = unsafe {
+            ioctl::js_get_axes(self.0, &mut axes)?;
+            ioctl::js_get_correction(self.0, corr.as_mut_ptr().as_mut().unwrap())?;
+            corr.assume_init()
+        };
+
+        let mut corr = corr
+            .to_vec()
+            .into_iter()
+            .take(axes as usize)
+            .map(|mut c| {
+                // disable dead zone
+                c.coefficients[0] = 0;
+                c.coefficients[1] = 0;
+                c
+            })
+            .collect::<Vec<_>>();
+
+        unsafe {
+            ioctl::js_set_correction(self.0, corr.as_mut_slice())?;
+        };
+
+        Ok(())
+    }
+
     pub fn info(&self) -> Result<DeviceInfo> {
         let mut axes = 0u8;
         let mut buttons = 0u8;
         let mut name = [0u8; 128];
 
         unsafe {
-            js_get_axes(self.0, &mut axes)?;
-            js_get_buttons(self.0, &mut buttons)?;
-            js_get_name(self.0, &mut name)?;
+            ioctl::js_get_axes(self.0, &mut axes)?;
+            ioctl::js_get_buttons(self.0, &mut buttons)?;
+            ioctl::js_get_name(self.0, &mut name)?;
         }
 
         let name = name.to_vec().into_iter().take_while(|&c| c != 0).collect();
