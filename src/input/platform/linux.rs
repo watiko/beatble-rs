@@ -5,11 +5,9 @@ use std::os::unix::io::RawFd;
 
 use bitflags::bitflags;
 use eyre::Result;
-use nix::{fcntl, unistd};
 use nix::errno::Errno;
+use nix::{fcntl, unistd};
 use thiserror::Error;
-
-use ioctl::{CorrectionType, JsCorrection};
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -64,8 +62,8 @@ struct RawEvent {
 mod ioctl {
     use std::mem::size_of;
 
-    use nix::{ioctl_read, ioctl_read_buf, libc, request_code_read, request_code_write};
     use nix::errno::Errno;
+    use nix::{ioctl_read, ioctl_read_buf, libc, request_code_read, request_code_write};
 
     #[repr(u16)]
     #[derive(Debug, Clone)]
@@ -166,19 +164,16 @@ impl Device {
     }
 
     pub fn disable_correction(&self) -> Result<()> {
-        let mut axes = 0u8;
-        // 64 is max axis number for safety
-        let mut corr = std::mem::MaybeUninit::<[JsCorrection; 64]>::uninit();
         let corr = unsafe {
+            let mut axes = 0u8;
             ioctl::js_get_axes(self.0, &mut axes)?;
-            ioctl::js_get_correction(self.0, corr.as_mut_ptr().as_mut().unwrap())?;
-            corr.assume_init()
+            let mut corr = Vec::with_capacity(axes as usize);
+            ioctl::js_get_correction(self.0, corr.as_mut_slice())?;
+            corr
         };
 
         let mut corr = corr
-            .to_vec()
             .into_iter()
-            .take(axes as usize)
             .map(|mut c| {
                 // disable dead zone
                 c.coefficients[0] = 0;
