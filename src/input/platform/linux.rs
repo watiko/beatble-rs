@@ -73,8 +73,14 @@ mod ioctl {
         Broken = 0x01,
     }
 
+    impl Default for CorrectionType {
+        fn default() -> Self {
+            CorrectionType::None
+        }
+    }
+
     #[repr(C)]
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     pub struct JsCorrection {
         pub coefficients: [i32; 8],
         pub precision: i16,
@@ -167,7 +173,7 @@ impl Device {
         let corr = unsafe {
             let mut axes = 0u8;
             ioctl::js_get_axes(self.0, &mut axes)?;
-            let mut corr = Vec::with_capacity(axes as usize);
+            let mut corr = vec![ioctl::JsCorrection::default(); axes as usize];
             ioctl::js_get_correction(self.0, corr.as_mut_slice())?;
             corr
         };
