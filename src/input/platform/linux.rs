@@ -8,6 +8,7 @@ use eyre::Result;
 use nix::errno::Errno;
 use nix::{fcntl, unistd};
 use thiserror::Error;
+use crate::input::platform::linux::ioctl::CorrectionType;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -141,7 +142,11 @@ impl From<RawEvent> for Option<Event> {
                     Some(Event::ButtonPressed(ev.number))
                 }
             }
-            EventType::AXIS => Some(Event::AxisChanged(ev.number, ev.value)),
+            EventType::AXIS => {
+                // assume value range is 0-255 (u8).
+                let value = ev.value << 8;
+                Some(Event::AxisChanged(ev.number, value))
+            },
             _ => unreachable!(),
         }
     }
@@ -181,9 +186,8 @@ impl Device {
         let mut corr = corr
             .into_iter()
             .map(|mut c| {
-                // disable dead zone
-                c.coefficients[0] = 0;
-                c.coefficients[1] = 0;
+                // disable calibration
+                c.typ = CorrectionType::None;
                 c
             })
             .collect::<Vec<_>>();
