@@ -29,6 +29,16 @@ pub struct KeyInput {
     pub option_button: OptionButton,
 }
 
+impl Default for KeyInput {
+    fn default() -> Self {
+        Self {
+            scratch: 0,
+            normal_button: NormalButton::empty(),
+            option_button: OptionButton::empty(),
+        }
+    }
+}
+
 impl KeyInput {
     pub fn init() -> Self {
         Self {

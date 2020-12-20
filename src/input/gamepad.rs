@@ -101,13 +101,9 @@ fn update_key_input(key_input: &mut KeyInput, event: Event) {
                 key_input.option_button.insert(button);
             }
         }
-        Event::ButtonReleased(button) => {
-            if let Some(button) = button.normal_button() {
-                key_input.normal_button.remove(button);
-            }
-            if let Some(button) = button.option_button() {
-                key_input.option_button.remove(button);
-            }
+        Event::ButtonReleased(_button) => {
+            // reset by notify loop
+            return;
         }
         Event::AxisChanged(_axis, value) => {
             key_input.scratch = convert_scratch(value);

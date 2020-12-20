@@ -48,6 +48,11 @@ pub fn create_key_input_characteristic(
                                 break;
                             };
 
+                            {
+                                // reset
+                                key_input.store(KeyInput::default());
+                            }
+
                             let payload = { key_input.load().to_payload((counter & 0xFF) as u8) };
                             trace!("payload: {:?}", payload);
 
