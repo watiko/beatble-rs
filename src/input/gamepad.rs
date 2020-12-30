@@ -1,31 +1,28 @@
 use std::sync::Arc;
 
 use crossbeam::atomic::AtomicCell;
-use gilrs::ev::Button;
-use gilrs::{Event, EventType, Gilrs, GilrsBuilder};
+use eyre::{Result, WrapErr};
 use log::{debug, error, info, trace};
 
 use super::ble::{KeyInput, NormalButton, OptionButton};
-
-const ENTRY_MODEL_MAPPING: &str = "03000000cf1c00001810000011010000,Konami Amusement beatmania IIDX controller Entry Model,platform:Linux,a:b0,b:b1,y:b2,x:b3,leftshoulder:b4,lefttrigger:b5,rightshoulder:b6,back:b8,start:b9,leftx:a0";
-const PHOENIXWAN_MAPPING: &str = "03000000cf1c00004880000010010000,PowerA Controller INF&BMS,platform:Linux,platform:Linux,a:b0,b:b1,y:b2,x:b3,leftshoulder:b4,lefttrigger:b5,rightshoulder:b6,back:b8,start:b9,guide:b10,righttrigger:b11,leftx:a0";
+use super::platform::linux::{Device, Event};
 
 trait CodeExt {
     fn normal_button(self) -> Option<NormalButton>;
     fn option_button(self) -> Option<OptionButton>;
 }
 
-impl CodeExt for Button {
+impl CodeExt for u8 {
     #[inline]
     fn normal_button(self) -> Option<NormalButton> {
         match self {
-            Button::South => Some(NormalButton::B1),
-            Button::East => Some(NormalButton::B2),
-            Button::North => Some(NormalButton::B3),
-            Button::West => Some(NormalButton::B4),
-            Button::LeftTrigger => Some(NormalButton::B5),
-            Button::LeftTrigger2 => Some(NormalButton::B6),
-            Button::RightTrigger => Some(NormalButton::B7),
+            0 => Some(NormalButton::B1),
+            1 => Some(NormalButton::B2),
+            2 => Some(NormalButton::B3),
+            3 => Some(NormalButton::B4),
+            4 => Some(NormalButton::B5),
+            5 => Some(NormalButton::B6),
+            6 => Some(NormalButton::B7),
             _ => None,
         }
     }
@@ -33,83 +30,70 @@ impl CodeExt for Button {
     #[inline]
     fn option_button(self) -> Option<OptionButton> {
         match self {
-            Button::Select => Some(OptionButton::E1),
-            Button::Start => Some(OptionButton::E2),
-            Button::Mode => Some(OptionButton::E3),
-            Button::RightTrigger2 => Some(OptionButton::E4),
+            8 => Some(OptionButton::E1),
+            9 => Some(OptionButton::E2),
+            10 => Some(OptionButton::E3),
+            11 => Some(OptionButton::E4),
             _ => None,
         }
     }
 }
 
-// value: from -1.0 to 1.0
 #[inline]
-fn convert_scratch(value: f32) -> u8 {
+fn convert_scratch(value: i16) -> u8 {
     // sensitivity is doubled
-    ((((value + 1.0) * 256.0) as u16) % 256) as u8
+    (((((value >> 8) as u8) as u16) * 2) % 0xFF) as u8
 }
 
-pub fn create_input_handler() -> Result<Arc<AtomicCell<KeyInput>>, Box<dyn std::error::Error>> {
+pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
     debug!(
         "AtomicCell::<KeyInput>::is_lock_free: {}",
         AtomicCell::<KeyInput>::is_lock_free()
     );
     let atomic_key_input = Arc::new(AtomicCell::new(KeyInput::init()));
 
-    {
-        // duplicated because Send is not implemented to Gilrs on Linux
-        let gilrs = create_gilrs().expect("failed to create gilrs instance");
-        gilrs.gamepads().next().expect("no gamepad detected");
-    }
+    let mut device = Device::open(input).context(format!("no gamepad found: {}", input))?;
+    info!("connected to {} at {}", device.info()?, input);
+    device.disable_correction()?;
 
     {
         let atomic_key_input = Arc::clone(&atomic_key_input);
         tokio::task::spawn_blocking(move || {
-            info!("input_handler spawned");
-            let mut gilrs = create_gilrs().expect("failed to create gilrs instance");
-
-            for (id, gamepad) in gilrs.gamepads() {
-                debug!("founded gamepad: id({}), name({})", id, gamepad.name());
-            }
-
-            // TODO: make selectable
-            let (gamepad_id, gamepad) = gilrs.gamepads().next().expect("no gamepad detected");
-            info!("connected gamepad name: {}", gamepad.name());
-            let mut key_input = KeyInput::init();
-
             info!("input handler watching input event");
-            loop {
-                while let Some(Event { id, event, time: _ }) = gilrs.next_event() {
-                    if id != gamepad_id {
-                        // filter
-                        continue;
-                    };
-
-                    trace!("event: {:?}", event);
-                    update_key_input(&mut key_input, event);
-                    trace!("key_input: {:?}", key_input);
-                    atomic_key_input.store(key_input);
+            let mut key_input = KeyInput::init();
+            'e: loop {
+                while let Some(event) = device.next() {
+                    match event {
+                        Event::Disconnected => {
+                            error!("controller disconnected");
+                            break 'e;
+                        }
+                        Event::Error(e) => {
+                            error!("unknown error: {}", e);
+                            break 'e;
+                        }
+                        Event::ButtonPressed(_)
+                        | Event::ButtonReleased(_)
+                        | Event::AxisChanged(_, _) => {
+                            trace!("event: {:?}", event);
+                            update_key_input(&mut key_input, event);
+                            trace!("key_input: {:?}", key_input);
+                            atomic_key_input.store(key_input);
+                        }
+                    }
                 }
             }
+            panic!("input handler exiting");
         });
     };
 
     Ok(atomic_key_input)
 }
 
-fn create_gilrs() -> Result<Gilrs, gilrs::Error> {
-    GilrsBuilder::new()
-        .with_default_filters(false)
-        .add_env_mappings(true)
-        .add_mappings(ENTRY_MODEL_MAPPING)
-        .add_mappings(PHOENIXWAN_MAPPING)
-        .build()
-}
-
 #[inline]
-fn update_key_input(key_input: &mut KeyInput, event_type: EventType) {
-    match event_type {
-        EventType::ButtonPressed(button, _code) => {
+fn update_key_input(key_input: &mut KeyInput, event: Event) {
+    match event {
+        Event::ButtonPressed(button) => {
             if let Some(button) = button.normal_button() {
                 key_input.normal_button.insert(button);
             }
@@ -117,7 +101,7 @@ fn update_key_input(key_input: &mut KeyInput, event_type: EventType) {
                 key_input.option_button.insert(button);
             }
         }
-        EventType::ButtonReleased(button, _code) => {
+        Event::ButtonReleased(button) => {
             if let Some(button) = button.normal_button() {
                 key_input.normal_button.remove(button);
             }
@@ -125,17 +109,9 @@ fn update_key_input(key_input: &mut KeyInput, event_type: EventType) {
                 key_input.option_button.remove(button);
             }
         }
-        EventType::AxisChanged(_axis, value, _code) => {
+        Event::AxisChanged(_axis, value) => {
             key_input.scratch = convert_scratch(value);
         }
-        EventType::ButtonChanged(_, _, _) | EventType::ButtonRepeated(_, _) => {
-            // ignore
-        }
-        EventType::Connected => {
-            info!("controller connected: {:?}", event_type);
-        }
-        EventType::Disconnected | EventType::Dropped => {
-            error!("controller disconnected/dropped: {:?}", event_type);
-        }
+        Event::Disconnected | Event::Error(_) => unreachable!(),
     };
 }
