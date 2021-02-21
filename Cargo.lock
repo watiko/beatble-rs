@@ -82,8 +82,9 @@ checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 
 [[package]]
 name = "bluster"
-version = "0.1.2"
-source = "git+https://github.com/dfrankland/bluster?rev=1931b0474ca481eb31e343cab85956c05749688b#1931b0474ca481eb31e343cab85956c05749688b"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fe61fe272ad85427349b9fb9b59b68400291052b2d3c72ebac11deffe20df79"
 dependencies = [
  "dbus",
  "dbus-crossroads",
