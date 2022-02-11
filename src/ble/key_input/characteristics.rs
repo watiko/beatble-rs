@@ -58,7 +58,7 @@ pub fn create_key_input_characteristic(
                                 .unwrap();
 
                             counter = (counter + 2) & 0xFF;
-                            tokio::time::delay_for(sleep_duration).await;
+                            tokio::time::sleep(sleep_duration).await;
                         }
                         debug!("ble_notifier finished");
                     });

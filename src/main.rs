@@ -62,7 +62,7 @@ async fn run_peripheral(
     info!("Peripheral started advertising {}", ADVERTISING_NAME);
 
     while peripheral.is_advertising().await? {
-        tokio::time::delay_for(tokio::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
     info!("Peripheral stopped advertising {}", ADVERTISING_NAME);
 
