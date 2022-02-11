@@ -62,7 +62,7 @@ pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
             info!("input handler watching input event");
             let mut key_input = KeyInput::init();
             'e: loop {
-                while let Some(event) = device.next() {
+                for event in device.by_ref() {
                     match event {
                         Event::Disconnected => {
                             error!("controller disconnected");

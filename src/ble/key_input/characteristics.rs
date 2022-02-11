@@ -48,7 +48,7 @@ pub fn create_key_input_characteristic(
                                 break;
                             };
 
-                            let payload = { key_input.load().to_payload((counter & 0xFF) as u8) };
+                            let payload = { key_input.load().as_payload((counter & 0xFF) as u8) };
                             trace!("payload: {:?}", payload);
 
                             notify_subscribe
