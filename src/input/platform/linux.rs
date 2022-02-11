@@ -3,12 +3,12 @@
 
 use std::os::unix::io::RawFd;
 
+use crate::input::platform::linux::ioctl::CorrectionType;
 use bitflags::bitflags;
 use eyre::Result;
 use nix::errno::Errno;
 use nix::{fcntl, unistd};
 use thiserror::Error;
-use crate::input::platform::linux::ioctl::CorrectionType;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -146,7 +146,7 @@ impl From<RawEvent> for Option<Event> {
                 // assume value range is 0-255 (u8).
                 let value = ev.value << 8;
                 Some(Event::AxisChanged(ev.number, value))
-            },
+            }
             _ => unreachable!(),
         }
     }
@@ -159,13 +159,12 @@ impl Device {
         // mode is dummy
         let fd = fcntl::open(path, fcntl::OFlag::O_RDONLY, nix::sys::stat::Mode::S_IRUSR).map_err(
             |err| {
-                use nix::Error;
                 use OpenError::*;
 
                 match err {
-                    Error::Sys(Errno::ENOENT) => DeviceFileNotFound(path.to_string()),
-                    Error::Sys(Errno::EPERM) => PermissionDenied(path.to_string()),
-                    Error::InvalidPath | Error::InvalidUtf8 => InvalidPath,
+                    Errno::ENOENT => DeviceFileNotFound(path.to_string()),
+                    Errno::EPERM => PermissionDenied(path.to_string()),
+                    Errno::EINVAL => InvalidPath,
                     e => Unknown(e.into()),
                 }
             },
@@ -238,7 +237,7 @@ impl Iterator for Device {
                 let raw_ev = unsafe { std::mem::transmute::<[u8; 8], RawEvent>(buf) };
                 raw_ev.into()
             }
-            Err(nix::Error::Sys(Errno::ENODEV)) => Some(Event::Disconnected),
+            Err(Errno::ENODEV) => Some(Event::Disconnected),
             Err(e) => Some(Event::Error(format!("read error: {}", e))),
         }
     }
