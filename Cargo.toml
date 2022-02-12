@@ -24,6 +24,6 @@ depends = "udev, systemd"
 assets = [
   ["target/release/beatble", "usr/bin/", "755"],
   ["assets/udev/*", "etc/udev/rules.d/", "644"],
-  ["assets/systemd/*", "etc/systemd/system/", "755"],
+  ["assets/systemd/*", "etc/systemd/system/", "644"],
 ]
 
