@@ -1,6 +1,7 @@
 use bitflags::bitflags;
 
 bitflags! {
+    #[derive(Clone, Copy, Debug)]
     pub struct NormalButton: u8 {
         const B1 = 0b00000001;
         const B2 = 0b00000010;
@@ -13,6 +14,7 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug)]
     pub struct OptionButton: u8 {
         const E1 = 0b0001;
         const E2 = 0b0010;
@@ -42,13 +44,13 @@ impl KeyInput {
         [
             self.scratch,
             0x00,
-            self.normal_button.bits,
-            self.option_button.bits,
+            self.normal_button.bits(),
+            self.option_button.bits(),
             counter,
             self.scratch,
             0x00,
-            self.normal_button.bits,
-            self.option_button.bits,
+            self.normal_button.bits(),
+            self.option_button.bits(),
             counter + 1,
         ]
     }

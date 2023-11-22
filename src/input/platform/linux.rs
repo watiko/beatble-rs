@@ -3,12 +3,12 @@
 
 use std::os::unix::io::RawFd;
 
+use crate::input::platform::linux::ioctl::CorrectionType;
 use bitflags::bitflags;
 use eyre::Result;
 use nix::errno::Errno;
 use nix::{fcntl, unistd};
 use thiserror::Error;
-use crate::input::platform::linux::ioctl::CorrectionType;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -45,6 +45,7 @@ impl std::fmt::Display for DeviceInfo {
 }
 
 bitflags! {
+    #[derive(PartialEq, Eq)]
     struct EventType: u8 {
         const BUTTON = 0x01;
         const AXIS = 0x02;
@@ -146,7 +147,7 @@ impl From<RawEvent> for Option<Event> {
                 // assume value range is 0-255 (u8).
                 let value = ev.value << 8;
                 Some(Event::AxisChanged(ev.number, value))
-            },
+            }
             _ => unreachable!(),
         }
     }
