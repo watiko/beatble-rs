@@ -25,8 +25,8 @@ pub enum OpenError {
     DeviceFileNotFound(String),
     #[error("PermissionDenied: {0}")]
     PermissionDenied(String),
-    #[error("InvalidPath")]
-    InvalidPath,
+    #[error("InvalidPath: {0}")]
+    InvalidPath(String),
     #[error("Unknown: {0}")]
     Unknown(eyre::Report),
 }
@@ -160,13 +160,12 @@ impl Device {
         // mode is dummy
         let fd = fcntl::open(path, fcntl::OFlag::O_RDONLY, nix::sys::stat::Mode::S_IRUSR).map_err(
             |err| {
-                use nix::Error;
                 use OpenError::*;
 
                 match err {
-                    Error::Sys(Errno::ENOENT) => DeviceFileNotFound(path.to_string()),
-                    Error::Sys(Errno::EPERM) => PermissionDenied(path.to_string()),
-                    Error::InvalidPath | Error::InvalidUtf8 => InvalidPath,
+                    Errno::ENOENT => DeviceFileNotFound(path.to_string()),
+                    Errno::EPERM => PermissionDenied(path.to_string()),
+                    Errno::EINVAL => InvalidPath(path.to_string()),
                     e => Unknown(e.into()),
                 }
             },
@@ -239,7 +238,7 @@ impl Iterator for Device {
                 let raw_ev = unsafe { std::mem::transmute::<[u8; 8], RawEvent>(buf) };
                 raw_ev.into()
             }
-            Err(nix::Error::Sys(Errno::ENODEV)) => Some(Event::Disconnected),
+            Err(Errno::ENODEV) => Some(Event::Disconnected),
             Err(e) => Some(Event::Error(format!("read error: {}", e))),
         }
     }
