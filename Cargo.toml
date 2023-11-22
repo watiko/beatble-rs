@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 bitflags = "1.2.1"
- bluster = "0.1.3"
+bluster = "0.1.3"
 clap = "2.33.3"
 crossbeam = "0.8.0"
 env_logger = "0.8.2"
@@ -26,4 +26,3 @@ assets = [
   ["assets/udev/*", "etc/udev/rules.d/", "644"],
   ["assets/systemd/*", "etc/systemd/system/", "755"],
 ]
-
