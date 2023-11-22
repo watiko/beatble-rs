@@ -110,7 +110,6 @@ dependencies = [
  "nix",
  "thiserror",
  "tokio 0.2.23",
- "uuid",
 ]
 
 [[package]]

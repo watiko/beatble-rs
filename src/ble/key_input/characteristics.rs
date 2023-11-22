@@ -14,8 +14,8 @@ use futures::channel::mpsc::channel;
 use futures::StreamExt;
 use log::{debug, info, trace};
 use tokio::time::Duration;
-use uuid::Uuid;
 
+use super::uuid::Uuid;
 use crate::input::KeyInput;
 
 const CHARACTERISTIC_UUID: u16 = 0xFF01;

@@ -4,7 +4,8 @@ use bluster::{
     gatt::{characteristic::Characteristic, service::Service},
     SdpShortUuid,
 };
-use uuid::Uuid;
+
+use super::uuid::Uuid;
 
 const SERVICE_UUID: u16 = 0xFF00;
 
