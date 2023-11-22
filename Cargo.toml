@@ -3,21 +3,20 @@ name = "beatble"
 version = "0.1.0"
 authors = ["watiko <service@mail.watiko.net>"]
 license = "MIT"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-bitflags = "1.2.1"
- bluster = "0.1.3"
-clap = "2.33.3"
-crossbeam = "0.8.0"
-env_logger = "0.8.2"
-eyre = "0.6.3"
+bitflags = "2.4.1"
+bluster = "0.2.0"
+clap = { version = "4.4.8", features = ["derive"] }
+crossbeam = "0.8.2"
+env_logger = "0.10.1"
+eyre = "0.6.9"
 futures = "0.3"
-log = "0.4.11"
-nix = "0.19.1"
-thiserror = "1.0.22"
-tokio = { version = "0.2", features = ["full"] }
-uuid = "0.8.1"
+log = "0.4.20"
+nix = { version = "0.27.1", features = ["fs", "ioctl"] }
+thiserror = "1.0.50"
+tokio = { version = "1.34.0", features = ["full"] }
 
 [package.metadata.deb]
 depends = "udev, systemd"
@@ -26,4 +25,3 @@ assets = [
   ["assets/udev/*", "etc/udev/rules.d/", "644"],
   ["assets/systemd/*", "etc/systemd/system/", "755"],
 ]
-

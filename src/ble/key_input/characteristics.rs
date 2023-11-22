@@ -14,8 +14,8 @@ use futures::channel::mpsc::channel;
 use futures::StreamExt;
 use log::{debug, info, trace};
 use tokio::time::Duration;
-use uuid::Uuid;
 
+use super::uuid::Uuid;
 use crate::input::KeyInput;
 
 const CHARACTERISTIC_UUID: u16 = 0xFF01;
@@ -58,7 +58,7 @@ pub fn create_key_input_characteristic(
                                 .unwrap();
 
                             counter = (counter + 2) & 0xFF;
-                            tokio::time::delay_for(sleep_duration).await;
+                            tokio::time::sleep(sleep_duration).await;
                         }
                         debug!("ble_notifier finished");
                     });
