@@ -16,7 +16,7 @@ futures = "0.3"
 log = "0.4.20"
 nix = { version = "0.27.1", features = ["fs", "ioctl"] }
 thiserror = "1.0.50"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "1.34.0", features = ["full"] }
 
 [package.metadata.deb]
 depends = "udev, systemd"
