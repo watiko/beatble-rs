@@ -14,7 +14,8 @@ mod ble;
 mod input;
 
 #[derive(Parser)]
-#[command(name = "beatble")]
+#[clap(name = "beatble")]
+#[clap(version = env!("VERSION"))]
 struct Args {
     /// input device path
     #[arg(value_name = "DEVICE")]
