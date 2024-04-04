@@ -44,7 +44,7 @@ pub fn create_key_input_characteristic(
                     let key_input = Arc::clone(&key_input);
                     tokio::spawn(async move {
                         loop {
-                            if !(&notifying).load(atomic::Ordering::Relaxed) {
+                            if !notifying.load(atomic::Ordering::Relaxed) {
                                 break;
                             };
 

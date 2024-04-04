@@ -40,7 +40,7 @@ impl KeyInput {
         }
     }
 
-    pub fn to_payload(&self, counter: u8) -> [u8; 10] {
+    pub fn to_payload(self, counter: u8) -> [u8; 10] {
         [
             self.scratch,
             0x00,

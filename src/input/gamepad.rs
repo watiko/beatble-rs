@@ -52,7 +52,7 @@ pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
     );
     let atomic_key_input = Arc::new(AtomicCell::new(KeyInput::init()));
 
-    let mut device = Device::open(input).context(format!("no gamepad found: {}", input))?;
+    let mut device = Device::open(input).context(format!("no gamepad found: {input}"))?;
     info!("connected to {} at {}", device.info()?, input);
     device.disable_correction()?;
 
@@ -62,22 +62,22 @@ pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
             info!("input handler watching input event");
             let mut key_input = KeyInput::init();
             'e: loop {
-                while let Some(event) = device.next() {
+                for event in device.by_ref() {
                     match event {
                         Event::Disconnected => {
                             error!("controller disconnected");
                             break 'e;
                         }
                         Event::Error(e) => {
-                            error!("unknown error: {}", e);
+                            error!("unknown error: {e}");
                             break 'e;
                         }
                         Event::ButtonPressed(_)
                         | Event::ButtonReleased(_)
                         | Event::AxisChanged(_, _) => {
-                            trace!("event: {:?}", event);
-                            update_key_input(&mut key_input, event);
-                            trace!("key_input: {:?}", key_input);
+                            trace!("event: {event:?}");
+                            update_key_input(&mut key_input, &event);
+                            trace!("key_input: {key_input:?}");
                             atomic_key_input.store(key_input);
                         }
                     }
@@ -91,8 +91,8 @@ pub fn create_input_handler(input: &str) -> Result<Arc<AtomicCell<KeyInput>>> {
 }
 
 #[inline]
-fn update_key_input(key_input: &mut KeyInput, event: Event) {
-    match event {
+fn update_key_input(key_input: &mut KeyInput, event: &Event) {
+    match *event {
         Event::ButtonPressed(button) => {
             if let Some(button) = button.normal_button() {
                 key_input.normal_button.insert(button);

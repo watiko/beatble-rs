@@ -68,17 +68,12 @@ mod ioctl {
     use nix::{ioctl_read, ioctl_read_buf, libc, request_code_read, request_code_write};
 
     #[repr(u16)]
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     #[allow(dead_code)]
     pub enum CorrectionType {
+        #[default]
         None = 0x00,
         Broken = 0x01,
-    }
-
-    impl Default for CorrectionType {
-        fn default() -> Self {
-            CorrectionType::None
-        }
     }
 
     #[repr(C)]
@@ -163,15 +158,15 @@ impl Device {
                 use OpenError::*;
 
                 match err {
-                    Errno::ENOENT => DeviceFileNotFound(path.to_string()),
-                    Errno::EPERM => PermissionDenied(path.to_string()),
-                    Errno::EINVAL => InvalidPath(path.to_string()),
+                    Errno::ENOENT => DeviceFileNotFound(path.to_owned()),
+                    Errno::EPERM => PermissionDenied(path.to_owned()),
+                    Errno::EINVAL => InvalidPath(path.to_owned()),
                     e => Unknown(e.into()),
                 }
             },
         )?;
 
-        Ok(Device(fd))
+        Ok(Self(fd))
     }
 
     pub fn disable_correction(&self) -> Result<()> {
@@ -208,9 +203,9 @@ impl Device {
             ioctl::js_get_axes(self.0, &mut axes)?;
             ioctl::js_get_buttons(self.0, &mut buttons)?;
             ioctl::js_get_name(self.0, &mut name)?;
-        }
+        };
 
-        let name = name.to_vec().into_iter().take_while(|&c| c != 0).collect();
+        let name = name.iter().copied().take_while(|&c| c != 0).collect();
         let name = String::from_utf8(name)?;
 
         Ok(DeviceInfo {
@@ -239,7 +234,7 @@ impl Iterator for Device {
                 raw_ev.into()
             }
             Err(Errno::ENODEV) => Some(Event::Disconnected),
-            Err(e) => Some(Event::Error(format!("read error: {}", e))),
+            Err(e) => Some(Event::Error(format!("read error: {e}"))),
         }
     }
 }
